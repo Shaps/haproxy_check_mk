@@ -1,5 +1,32 @@
 #!/usr/bin/php
 <?php
+/**
+ * haproxy_check_mk is a PHP program to get stats from HAProxy via
+ * UNIX Sockets
+ *
+ * haproxy_check_mk was written by Andrea Tartaglia, 2014 and is distributed
+ * via GitHub at https://github.com/shaps/haproxy_check_mk
+ *
+ *  @author Andrea Tartaglia - me@andreatartaglia.com
+ *  @copyright Andrea Tartaglia, 2014
+ *  @license GNU GPLv3
+ *
+ * This file is part of haproxy_check_mk.
+ *
+ * haproxy_check_mk is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * haproxy_check_mk is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with haproxy_check_mk.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 
 ###### CONFIG ############
 
@@ -21,7 +48,7 @@ $stats = HAProxy\Stats::get($exec); // Create the stats object
 foreach($stats->getBackendNames() as $backend){ 			// Iterate through the current config
   $servers = $stats->getServerNames($backend); 				// Get the server names for the current backend
   if($servers[count($servers)-1] == 'BACKEND'){ 			// If this is really a backend, then proceed, skip otherwise
-    $total_limit = 0;										
+    $total_limit = 0;
     $total_curr = 0;										// We're in a new backend, reset the stats
     $alert_crit = false;
     $alert_warn = false;
@@ -49,9 +76,9 @@ foreach($stats->getBackendNames() as $backend){ 			// Iterate through the curren
     }
 
     $usage_p = round($usage_p,2);
-	
+
 	// Build the output
-	
+
     if ($usage_p > $crit) {
       $alert_crit = true;
       $out = " Session CRIT - Total connections: ".$total_curr." - ".$usage_p.'%';
