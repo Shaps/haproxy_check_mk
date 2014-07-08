@@ -47,7 +47,9 @@ $stats = HAProxy\Stats::get($exec); // Create the stats object
 
 foreach($stats->getBackendNames() as $backend){ 			// Iterate through the current config
   $servers = $stats->getServerNames($backend); 				// Get the server names for the current backend
-  if($servers[count($servers)-1] == 'BACKEND'){ 			// If this is really a backend, then proceed, skip otherwise
+  if($servers[count($servers)-1] == 'BACKEND' && $backend != 'haproxy-stats'){ 			// If this is really a backend, then proceed, skip otherwise
+    $total_servers = count($servers)-1;
+    $backend_status = 0;
     $total_limit = 0;
     $total_curr = 0;										// We're in a new backend, reset the stats
     $alert_crit = false;
@@ -58,6 +60,19 @@ foreach($stats->getBackendNames() as $backend){ 			// Iterate through the curren
     foreach($servers as $server) {							// Iterate through the servers in this backend
       if($server != "BACKEND"){								// HAProxy returns also BACKEND as servername, skip it
         $server = $stats->getServiceStats($backend,$server);
+        switch($server->health->status){
+          case 'UP':
+                $backend_status++;
+                break;
+          case 'DOWN':
+                $backend_status--;
+                break;
+          case 'no check':
+                $backend_status++;
+                break;
+          default:
+                break;
+        }
         $total_curr += floatval($server->session->scur);
         if ($server->session->slim != "" ){					// If a limit is set, use it, use the default otherwise
           $total_limit += floatval($server->session->slim);
@@ -76,17 +91,24 @@ foreach($stats->getBackendNames() as $backend){ 			// Iterate through the curren
     }
 
     $usage_p = round($usage_p,2);
-
-	// Build the output
-
-    if ($usage_p > $crit) {
+    // Build the output
+    if($backend_status <= 0) {
+      $backend_status = 0;
       $alert_crit = true;
-      $out = " Session CRIT - Total connections: ".$total_curr." - ".$usage_p.'%';
-    }elseif ($usage_p > $warn) {
+      $out = " Backend CRIT - Servers up: ".$backend_status."/".$total_servers;
+    }elseif($backend_status < $total_servers){
       $alert_warn = true;
-      $out = "Session WARN - Total connections: ".$total_curr." - ".$usage_p.'%';
-    }else {
-      $out = "Session OK - Total connections: ".$total_curr." - ".$usage_p.'%';
+      $out = " Backend WARN - Servers up: ".$backend_status."/".$total_servers;
+    }else{
+      if ($usage_p > $crit) {
+        $alert_crit = true;
+        $out = " Session CRIT - Total connections: ".$total_curr." - ".$usage_p.'% - Servers up: '.$backend_status.'/'.$total_servers;
+      }elseif ($usage_p > $warn) {
+        $alert_warn = true;
+        $out = "Session WARN - Total connections: ".$total_curr." - ".$usage_p.'% - Servers up: '.$backend_status.'/'.$total_servers;
+      }else {
+        $out = "Session OK - Total connections: ".$total_curr." - ".$usage_p.'% - Servers up: '.$backend_status.'/'.$total_servers;
+      }
     }
     $perfdata = "connections=".$total_curr.";".$warn_lim.";".$crit_lim;
 
