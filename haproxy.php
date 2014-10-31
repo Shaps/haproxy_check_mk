@@ -64,9 +64,6 @@ foreach($stats->getBackendNames() as $backend){ 			// Iterate through the curren
           case 'UP':
                 $backend_status++;
                 break;
-          case 'DOWN':
-                $backend_status--;
-                break;
           case 'no check':
                 $backend_status++;
                 break;
